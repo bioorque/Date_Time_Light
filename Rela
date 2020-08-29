@@ -1,0 +1,20 @@
+import RPi.GPIO as GPIO
+from time import sleep
+
+pin = 18
+
+GPIO.setmode(GPIO.BCM)
+GPIO.setup(pin, GPIO.OUT,initialize)
+
+try:
+    while True:
+        GPIO.output(pin, 0)
+        print("High")
+        sleep(2)
+
+        GPIO.output(pin, 1)
+        print("Low")
+        sleep(1)
+        
+except KeyboardInterrupt: 
+    GPIO.cleanup()
