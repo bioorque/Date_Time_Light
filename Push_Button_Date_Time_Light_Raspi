@@ -1,0 +1,94 @@
+from datetime import date
+from datetime import datetime
+import pandas as pd
+
+import RPi.GPIO as GPIO
+from time import sleep
+
+pin = 18
+Button = 23
+LED_RED = 24
+LED_YEL = 25
+
+GPIO.setmode(GPIO.BCM)
+GPIO.setup(pin, GPIO.OUT, initial=GPIO.HIGH)
+GPIO.setup(Button,GPIO.IN,pull_up_down=GPIO.PUD_UP)
+GPIO.setup(LED_RED,GPIO.OUT)
+GPIO.setup(LED_YEL,GPIO.OUT)
+
+try:
+    while True:
+
+        date_today = date.today()
+        time_now = datetime.now()
+
+        current_date = date_today.strftime("%d/%m/%Y")
+        current_time = time_now.strftime("%H:%M")
+        current_time_sec = time_now.strftime("%H:%M:%S")
+        
+        print("")
+        print(current_time_sec)
+        button_state = GPIO.input(Button)
+        print(button_state)
+        print("")
+
+        print("Current Date =", current_date)
+        print("Current Time =", current_time)
+        print("")
+
+        data_current_date = [[current_date]]
+    
+        df1 = pd.DataFrame(data_current_date, columns = ["target_date"]) 
+        df2 = pd.read_csv('/home/pi/Pictures/Python/sunset_time_hamburg_2020.csv') 
+
+        df_Left_join_target_date_sunset_time = pd.merge(df1, df2, on ="target_date", how ="left")
+        df_Left_join_target_date_sunset_time
+
+        time_light_on = df_Left_join_target_date_sunset_time.at[0, 'sunset_time']
+
+        d_current_time = datetime.strptime(current_time, "%H:%M")
+        d_time_light_on = datetime.strptime(time_light_on, "%H:%M")
+
+        print("Time of Light On at Current Date (",current_date,") =", time_light_on)
+
+        time_light_off = "23:00"
+
+        print("Time of Light Off =", time_light_off)
+        print("")
+
+        d_time_light_off = datetime.strptime(time_light_off, "%H:%M")
+
+        delta_time_light_on = d_time_light_on - d_current_time
+        delta_time_light_off = d_time_light_off - d_current_time
+        
+        if button_state == 0:
+            GPIO.output(LED_RED,GPIO.HIGH)
+            GPIO.output(LED_YEL,GPIO.LOW)
+            GPIO.output(pin, 0)
+            sleep (5)
+        
+        else:
+            GPIO.output(LED_RED,GPIO.LOW) 
+            GPIO.output(LED_YEL,GPIO.HIGH)
+            GPIO.output(pin, 1)
+
+            if d_current_time >= d_time_light_on:
+                if d_current_time <= d_time_light_off:
+                   print("Status: LIGHT ON")
+                   GPIO.output(pin, 0)
+                    print("Time to Light Off =", delta_time_light_off)    
+    
+                else:
+                    print("Status: LIGHT OFF")
+                    GPIO.output(pin, 1)
+                    print("Time to Light On =", delta_time_light_on)
+    
+            else:
+                print("Status: LIGHT OFF")
+                GPIO.output(pin, 1)
+                print("Time to Light On =", delta_time_light_on)
+            
+        sleep(1)    
+    
+except KeyboardInterrupt: 
+    GPIO.cleanup()
